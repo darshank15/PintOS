@@ -1,0 +1,28 @@
+# Test cases for Assignment 3
+## Test cases for part 2 : preemption of threads
+
+1. alarm-single
+2. alarm-zero
+3. alarm-negative
+4. alarm-simultaneous
+5. alarm-multiple
+
+## Test cases for part 3 : priority scheduling
+
+1. alarm-priority
+2. priority-change
+3. priority-fifo
+4. priority-sema
+5. priority-condvar
+
+## Test cases for part 4 : advanced scheduler
+
+1. mlfqs-load-1
+2. mlfqs-load-60
+3. mlfqs-load-avg
+4. mlfqs-recent-1
+5. mlfqs-fair-2
+6. mlfqs-fair-20
+7. mlfqs-nice-2
+8. mlfqs-nice-10
+9. mlfqs-block
