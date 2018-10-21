@@ -71,6 +71,12 @@ static void schedule (void);
 void thread_schedule_tail (struct thread *prev);
 static tid_t allocate_tid (void);
 
+/*--->my Implemenation<---*/
+//*************************************************************************************************************************
+static struct list my_sleep_threads; // It contains list of all threads which are currently in sleeping state
+static bool check_awake = false;  //to make sure that wakeup method should not called before intitialisating the thread
+//*************************************************************************************************************************
+
 /* Initializes the threading system by transforming the code
    that's currently running into a thread.  This can't work in
    general and it is possible in this case only because loader.S
@@ -90,6 +96,12 @@ thread_init (void)
   ASSERT (intr_get_level () == INTR_OFF);
 
   lock_init (&tid_lock);
+
+   /*---> My Implementation <---*/
+  //contains list of sleeping threads
+  //Intitialised that list 
+  list_init(&my_sleep_threads); 
+
   list_init (&ready_list);
   list_init (&all_list);
 
@@ -98,6 +110,13 @@ thread_init (void)
   init_thread (initial_thread, "main", PRI_DEFAULT);
   initial_thread->status = THREAD_RUNNING;
   initial_thread->tid = allocate_tid ();
+
+  /*---> My Implementation <---*/
+  //*******************************************************************************
+	initial_thread->timer_tick_count = 0;
+  check_awake = true; //Thread has been intitialsed ,hence it can awake now
+  //*******************************************************************************
+
 }
 
 /* Starts preemptive thread scheduling by enabling interrupts.
@@ -133,6 +152,12 @@ thread_tick (void)
 #endif
   else
     kernel_ticks++;
+
+  //Wake up all threads whose sleeping time expired 
+	if (check_awake)
+	{
+		thread_wake();
+	}
 
   /* Enforce preemption. */
   if (++thread_ticks >= TIME_SLICE)
@@ -582,3 +607,54 @@ allocate_tid (void)
 /* Offset of `stack' member within `struct thread'.
    Used by switch.S, which can't figure it out on its own. */
 uint32_t thread_stack_ofs = offsetof (struct thread, stack);
+
+/*--> My Implementation <---*/
+//******************************************************************************
+//put the current thread into sleep list(blocked).
+void thread_sleep(long long current_time,long long sleep_amount)
+{
+  ASSERT(!intr_context());
+
+  // get base address of current thread
+	struct thread *current_thread=thread_current();
+  
+  // assigns sleep time to current thread
+	current_thread->timer_tick_count=current_time+sleep_amount;
+  
+  // add it into list of sleeping threads
+	list_push_back(&my_sleep_threads,&current_thread->ele_for_sleep);
+  
+  // change status of current thread to "BLOCKED"
+  // and Schedule the next thread
+	thread_block();
+}
+
+//wake up thread
+void thread_wake()
+{
+  //current intrupt status must be off.
+	ASSERT(intr_get_level() == INTR_OFF);
+  // get total time (from boot time to current time)
+	int64_t current_ticks = timer_ticks();
+	struct list_elem *item;
+  // iterate over the sleep list
+	for(item = list_begin(&my_sleep_threads);item!=list_end(&my_sleep_threads);item=list_next(item))
+	{
+		struct thread *thrd=list_entry(item,struct thread,ele_for_sleep);
+    //To check weather thread is valid(magic value & not null)
+		ASSERT(is_thread(thrd));
+    //if its sleeping time is expired then remove it from sleep list.
+    //ublocking the thread(move thread to read-to-run state)
+		if (thrd->timer_tick_count<=current_ticks)
+		{
+			thrd->timer_tick_count=0;
+			list_remove(&thrd->ele_for_sleep);
+			thread_unblock(thrd);
+			intr_yield_on_return();
+		}
+
+	}
+
+}
+
+//******************************************************************************

@@ -100,6 +100,8 @@ struct thread
 
     /* Owned by thread.c. */
     unsigned magic;                     /* Detects stack overflow. */
+    struct list_elem ele_for_sleep;   /*---> denote that thread is in sleep state <---*/
+    long long timer_tick_count;        /*---> denotes timespan for which thread will be asleep <---*/
   };
 
 /* If false (default), use round-robin scheduler.
@@ -137,5 +139,13 @@ int thread_get_nice (void);
 void thread_set_nice (int);
 int thread_get_recent_cpu (void);
 int thread_get_load_avg (void);
+
+/* My Implementation */
+//******************************************************************************
+//method to sleep the thread.
+void thread_sleep(long long current_time,long long sleep_amount); 
+//method to wakeup the thread
+void thread_wake();
+//******************************************************************************
 
 #endif /* threads/thread.h */

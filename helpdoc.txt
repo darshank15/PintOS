@@ -1,0 +1,16 @@
+pintos run invalid-pgm
+
+Error and debugging
+https://pintosiiith.wordpress.com/2012/09/18/using-cscope-and-ctags-to-navigate-pintos-code/
+
+cscope -Rvkq
+
+1.thread.h
+2.thread.c
+3.timer.c
+
+old/Pintos/src/devices/timer.c
+old/Pintos/src/threads/thread.c
+old/Pintos/src/threads/thread.h
+
+

@@ -92,8 +92,24 @@ timer_sleep (int64_t ticks)
   int64_t start = timer_ticks ();
 
   ASSERT (intr_get_level () == INTR_ON);
-  while (timer_elapsed (start) < ticks) 
-    thread_yield ();
+
+  // while (timer_elapsed (start) < ticks) 
+  //   thread_yield ();
+
+  /*---> My Implementation <--- */
+  //******************************************************************************
+  if(ticks>0)
+  {
+    // store current interrupt state in old_itrpt_state and then disable it.
+    enum intr_level old_itrpt_state = intr_disable();
+    // get total time (from boot time to current time)
+    int64_t totaltime=timer_ticks();
+    // thread_sleep to put current thread into sleep state for ticks amount of time.
+    thread_sleep(totaltime, ticks);
+    // use old_itrpt_state to set interrupt level again. 
+		intr_set_level(old_itrpt_state);
+  }
+  //******************************************************************************
 }
 
 /* Sleeps for approximately MS milliseconds.  Interrupts must be
