@@ -113,11 +113,31 @@ sema_up (struct semaphore *sema)
   ASSERT (sema != NULL);
 
   old_level = intr_disable ();
-  if (!list_empty (&sema->waiters)) 
-    thread_unblock (list_entry (list_pop_front (&sema->waiters),
-                                struct thread, elem));
+  // if (!list_empty (&sema->waiters)) 
+  //   thread_unblock (list_entry (list_pop_front (&sema->waiters),
+  //                               struct thread, elem));
+
+  /*---> My Implementation <--- */
+  /**************************************************************************/
+  // sort waiting list of threads on given condition based on priority in descending order.
+  // then get first thread from waiting list and unblock it then push it in ready queue.
+  if (!list_empty(&sema->waiters))
+  {
+    list_sort(&sema->waiters,comp_priority_sort,NULL);
+    thread_unblock(list_entry(list_pop_front(&sema->waiters),
+                                struct thread,elem));
+  }
+  /****************************************************************************/
+
   sema->value++;
   intr_set_level (old_level);
+  
+  /*---> My Implementation <--- */
+  /*********************************************************/
+  // check priority of currently running thread and priority of unblocked thread
+  // and then schedule thread whoever has higher priority(preemption).
+  thread_yield();
+  /*********************************************************/
 }
 
 static void sema_test_helper (void *sema_);
@@ -317,8 +337,16 @@ cond_signal (struct condition *cond, struct lock *lock UNUSED)
   ASSERT (lock_held_by_current_thread (lock));
 
   if (!list_empty (&cond->waiters)) 
+  {
+    /*---> My Implementation <--- */
+    /*****************************************************************/
+    // sort waiting list of threads on given condition based on priority in descending order.
+    list_sort(&cond->waiters,comp_cond_priority_sort,NULL);
+    /***************************************************************/
+
     sema_up (&list_entry (list_pop_front (&cond->waiters),
                           struct semaphore_elem, elem)->semaphore);
+  }
 }
 
 /* Wakes up all threads, if any, waiting on COND (protected by
@@ -336,3 +364,17 @@ cond_broadcast (struct condition *cond, struct lock *lock)
   while (!list_empty (&cond->waiters))
     cond_signal (cond, lock);
 }
+
+/*---> My Implementation <--- */
+/********************************************************************************/
+// (given condition)list_elem->semaphore_elem,semaphore_elem->semaphore.waiters
+// get first thread from waiting list of respected semaphore.
+bool comp_cond_priority_sort(struct list_elem *elem1,struct list_elem *elem2,void *aux)
+{
+  struct semaphore_elem *semelem1=list_entry(elem1,struct semaphore_elem,elem);
+  struct semaphore_elem *semelem2=list_entry(elem2,struct semaphore_elem,elem);
+ 
+   return list_entry(list_front(&semelem1->semaphore.waiters),struct thread,elem)->priority > 
+            list_entry(list_front(&semelem2->semaphore.waiters),struct thread,elem)->priority;
+ }
+ /********************************************************************************/

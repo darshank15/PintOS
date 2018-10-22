@@ -141,11 +141,13 @@ int thread_get_recent_cpu (void);
 int thread_get_load_avg (void);
 
 /* My Implementation */
-//******************************************************************************
+/*******************************************************************************/
 //method to sleep the thread.
 void thread_sleep(long long current_time,long long sleep_amount); 
 //method to wakeup the thread
-void thread_wake();
-//******************************************************************************
+void thread_wake(void);
+// comparator function to sort list based on priority in descending order.
+bool comp_priority_sort(struct list_elem *elem1,struct list_elem *elem2,void *aux);
+/*******************************************************************************/
 
 #endif /* threads/thread.h */

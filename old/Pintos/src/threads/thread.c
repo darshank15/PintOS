@@ -113,8 +113,8 @@ thread_init (void)
 
   /*---> My Implementation <---*/
   //*******************************************************************************
-	initial_thread->timer_tick_count = 0;
-  check_awake = true; //Thread has been intitialsed ,hence it can awake now
+  initial_thread->timer_tick_count=0;
+  check_awake=true; //Thread has been intitialsed ,hence it can awake now
   //*******************************************************************************
 
 }
@@ -154,10 +154,10 @@ thread_tick (void)
     kernel_ticks++;
 
   //Wake up all threads whose sleeping time expired 
-	if (check_awake)
-	{
-		thread_wake();
-	}
+  if (check_awake)
+  {
+    thread_wake();
+  }
 
   /* Enforce preemption. */
   if (++thread_ticks >= TIME_SLICE)
@@ -226,6 +226,17 @@ thread_create (const char *name, int priority,
   /* Add to run queue. */
   thread_unblock (t);
 
+  /* My Implementation */
+/********************************************************************/
+// if newly created thread has more priority than currently running thread then
+// yield cpu from currently running thread and call schedule function for scheduling.
+  enum intr_level old_level;
+  old_level=intr_disable();
+  if(t->priority>thread_current()->priority)
+    thread_yield();
+   intr_set_level(old_level);
+/*********************************************************************/
+
   return tid;
 }
 
@@ -263,6 +274,13 @@ thread_unblock (struct thread *t)
   old_level = intr_disable ();
   ASSERT (t->status == THREAD_BLOCKED);
   list_push_back (&ready_list, &t->elem);
+
+  /* My Implementation */
+    /**************************************************************************/
+    // sort ready list based on priority in descending order.
+    list_sort(&ready_list,comp_priority_sort,NULL);
+    /**************************************************************************/
+
   t->status = THREAD_READY;
   intr_set_level (old_level);
 }
@@ -333,7 +351,16 @@ thread_yield (void)
 
   old_level = intr_disable ();
   if (cur != idle_thread) 
+  {
     list_push_back (&ready_list, &cur->elem);
+
+    /* My Implementation */
+    /**************************************************************************/
+    // sort ready list based on priority in descending order.
+    list_sort(&ready_list,comp_priority_sort,NULL);
+    /**************************************************************************/
+
+  }
   cur->status = THREAD_READY;
   schedule ();
   intr_set_level (old_level);
@@ -361,6 +388,27 @@ void
 thread_set_priority (int new_priority) 
 {
   thread_current ()->priority = new_priority;
+
+  /* My Implementation */
+  /**************************************************************************/
+  // if currently running thread has low priority then first thread of ready list 
+  // (already sorted in descending order) yield cpu from currently running thread
+  // and schedule it again.
+   enum intr_level old_level;
+   old_level = intr_disable();
+  if(!list_empty(&ready_list))
+  {
+    struct list_elem *firstelem=list_front(&ready_list);
+    struct thread *thread1=list_entry(firstelem,struct thread,elem);
+
+     if(thread1->priority>thread_current()->priority)
+     {
+       thread_yield();
+     }
+  }
+  intr_set_level(old_level);
+  /*************************************************************************/
+
 }
 
 /* Returns the current thread's priority. */
@@ -616,45 +664,56 @@ void thread_sleep(long long current_time,long long sleep_amount)
   ASSERT(!intr_context());
 
   // get base address of current thread
-	struct thread *current_thread=thread_current();
+  struct thread *current_thread=thread_current();
   
   // assigns sleep time to current thread
-	current_thread->timer_tick_count=current_time+sleep_amount;
+  current_thread->timer_tick_count=current_time+sleep_amount;
   
   // add it into list of sleeping threads
-	list_push_back(&my_sleep_threads,&current_thread->ele_for_sleep);
+  list_push_back(&my_sleep_threads,&current_thread->ele_for_sleep);
   
   // change status of current thread to "BLOCKED"
   // and Schedule the next thread
-	thread_block();
+  thread_block();
 }
 
 //wake up thread
-void thread_wake()
+void thread_wake(void)
 {
   //current intrupt status must be off.
-	ASSERT(intr_get_level() == INTR_OFF);
+  ASSERT(intr_get_level() == INTR_OFF);
   // get total time (from boot time to current time)
-	int64_t current_ticks = timer_ticks();
-	struct list_elem *item;
+  int64_t current_ticks = timer_ticks();
+  struct list_elem *item;
   // iterate over the sleep list
-	for(item = list_begin(&my_sleep_threads);item!=list_end(&my_sleep_threads);item=list_next(item))
-	{
-		struct thread *thrd=list_entry(item,struct thread,ele_for_sleep);
+  for(item=list_begin(&my_sleep_threads);item!=list_end(&my_sleep_threads);item=list_next(item))
+  {
+    struct thread *thrd=list_entry(item,struct thread,ele_for_sleep);
     //To check weather thread is valid(magic value & not null)
-		ASSERT(is_thread(thrd));
+    ASSERT(is_thread(thrd));
     //if its sleeping time is expired then remove it from sleep list.
     //ublocking the thread(move thread to read-to-run state)
-		if (thrd->timer_tick_count<=current_ticks)
-		{
-			thrd->timer_tick_count=0;
-			list_remove(&thrd->ele_for_sleep);
-			thread_unblock(thrd);
-			intr_yield_on_return();
-		}
+    if (thrd->timer_tick_count<=current_ticks)
+    {
+      thrd->timer_tick_count=0;
+      list_remove(&thrd->ele_for_sleep);
+      thread_unblock(thrd);
+      intr_yield_on_return();
+    }
 
-	}
+  }
 
 }
 
+/*---> My Implementation <--- */
 //******************************************************************************
+// get base address(struct of thread) of list_elem first and second and
+// compare its priority. (if first>second return true else return false)
+bool comp_priority_sort(struct list_elem *elem1,struct list_elem *elem2,void *aux)
+{
+  struct thread *thread1=list_entry(elem1,struct thread,elem);
+  struct thread *thread2=list_entry(elem2,struct thread,elem);
+
+   return thread1->priority>thread2->priority;
+ } 
+ //******************************************************************************
