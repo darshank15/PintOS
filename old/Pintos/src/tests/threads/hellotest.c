@@ -1,0 +1,5 @@
+
+void helloworld()
+{
+	printf("Hello");
+}

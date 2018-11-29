@@ -1,0 +1,25 @@
+Check all testcases
+
+$ cd $HOME/os-pg/pintos/src/threads/build
+$ make check
+
+Run particular test case
+
+$ cd $HOME/os-pg/pintos/src/threads/build
+$ touch tests/threads/alarm-multiple.result
+$ make tests/threads/alarm-multiple.result
+
+$ cat tests/threads/alarm-multiple.result
+$ cat tests/threads/alarm-single.result
+$ cat tests/threads/alarm-zero.result
+$ cat tests/threads/alarm-simultaneous.result
+$ cat tests/threads/alarm-negative.result
+$ cat tests/threads/alarm-priority.result
+$ cat tests/threads/priority-change.result
+$ cat tests/threads/priority-fifo.result
+$ cat tests/threads/priority-sema.result
+$ cat tests/threads/priority-condvar.result
+
+
+
+Reference--  https://pintosiiith.wordpress.com/2012/10/01/running-test-cases-for-pintos-assignment/
